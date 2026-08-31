@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Recepción · Calidad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#182430;
+    --navy:#1B2A41;
+    --paper:#F3F3EE;
+    --paper-2:#E8E8E0;
+    --line:#CBCBBF;
+    --amber:#E2962F;
+    --green:#2F6B4F;
+    --green-bg:#E4EFE7;
+    --red:#B23A34;
+    --red-bg:#F4E4E2;
+    --muted:#6B7280;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    padding-bottom:60px;
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:0 16px;}
+
+  /* HEADER */
+  header{
+    background:var(--navy);
+    color:var(--paper);
+    padding:22px 16px 20px;
+    border-bottom:4px solid var(--amber);
+  }
+  header .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--amber);
+    margin:0 0 4px;
+  }
+  header h1{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:24px;
+    letter-spacing:.01em;
+    margin:0;
+    text-transform:uppercase;
+  }
+  header p{
+    margin:6px 0 0;
+    font-size:13px;
+    color:#B9C2CE;
+    max-width:46ch;
+  }
+
+  section{padding:20px 0;}
+  .card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .label-eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    display:block;
+    margin-bottom:6px;
+  }
+  h2.section-title{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    font-size:16px;
+    letter-spacing:.03em;
+    margin:0 0 12px;
+    color:var(--navy);
+    border-bottom:2px solid var(--paper-2);
+    padding-bottom:8px;
+  }
+
+  /* FORM */
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .field{flex:1 1 200px;display:flex;flex-direction:column;gap:4px;}
+  .field label{font-size:12px;color:var(--muted);font-weight:600;}
+  .field input, .field select{
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--navy);outline-offset:1px;}
+
+  /* CRITERIA GROUPS */
+  .crit-group{margin-top:16px;}
+  .crit-group-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:8px;
+  }
+  .crit-group-head .name{
+    font-family:'Oswald',sans-serif;
+    font-size:14px;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    color:var(--navy);
+  }
+  .crit-group-head .pct{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    font-weight:600;
+  }
+  .bar-track{
+    height:6px;
+    background:var(--paper-2);
+    border-radius:3px;
+    overflow:hidden;
+    margin-bottom:10px;
+  }
+  .bar-fill{height:100%;background:var(--navy);transition:width .2s ease;}
+  .crit-item{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:8px 0;
+    border-bottom:1px dashed var(--paper-2);
+  }
+  .crit-item:last-child{border-bottom:none;}
+  .crit-item input[type=checkbox]{
+    margin-top:2px;
+    width:18px;height:18px;
+    accent-color:var(--green);
+    flex-shrink:0;
+  }
+  .crit-item .txt{flex:1;font-size:13.5px;line-height:1.4;}
+  .crit-item .w{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--muted);
+    flex-shrink:0;
+  }
+  .crit-item.critical .txt{font-weight:600;}
+  .crit-item.critical .tag{
+    display:inline-block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9.5px;
+    letter-spacing:.05em;
+    background:var(--amber);
+    color:var(--navy);
+    padding:1px 5px;
+    border-radius:2px;
+    margin-left:6px;
+    vertical-align:middle;
+  }
+
+  /* RESULT / STAMP */
+  .result-panel{
+    position:sticky;
+    bottom:0;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    margin-top:6px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    box-shadow:0 -4px 14px rgba(0,0,0,.08);
+  }
+  .score-block .score-num{
+    font-family:'Oswald',sans-serif;
+    font-size:30px;
+    font-weight:600;
+    line-height:1;
+  }
+  .score-block .score-lbl{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--muted);
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+  .stamp{
+    font-family:'Oswald',sans-serif;
+    font-size:15px;
+    font-weight:700;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    padding:8px 14px;
+    border:3px solid currentColor;
+    border-radius:4px;
+    transform:rotate(-4deg);
+    white-space:nowrap;
+  }
+  .stamp.accept{color:var(--green);background:var(--green-bg);}
+  .stamp.reject{color:var(--red);background:var(--red-bg);}
+  .stamp.pending{color:var(--muted);background:var(--paper-2);border-style:dashed;}
+
+  .critical-warning{
+    font-size:12px;
+    color:var(--red);
+    font-weight:600;
+    margin-top:8px;
+  }
+
+  button{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    border:none;
+    border-radius:var(--radius);
+    padding:11px 16px;
+    cursor:pointer;
+  }
+  .btn-primary{background:var(--navy);color:#fff;width:100%;margin-top:14px;}
+  .btn-primary:disabled{background:var(--line);color:var(--muted);cursor:not-allowed;}
+  .btn-ghost{background:transparent;color:var(--navy);border:1px solid var(--line);font-size:12.5px;padding:6px 10px;}
+
+  /* HISTORY */
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--muted);
+    text-align:left;
+    padding:6px 6px;
+    border-bottom:2px solid var(--paper-2);
+  }
+  td{padding:8px 6px;border-bottom:1px solid var(--paper-2);vertical-align:top;}
+  .pill{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    font-weight:600;
+    padding:2px 7px;
+    border-radius:10px;
+    display:inline-block;
+  }
+  .pill.accept{background:var(--green-bg);color:var(--green);}
+  .pill.reject{background:var(--red-bg);color:var(--red);}
+  .empty-state{
+    text-align:center;
+    color:var(--muted);
+    font-size:13px;
+    padding:20px 0;
+  }
+
+  /* REJECTION ACTIONS */
+  .reject-alert{
+    background:var(--red-bg);
+    border:1px solid var(--red);
+    border-left:5px solid var(--red);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    margin-bottom:14px;
+  }
+  .reject-alert h3{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    font-size:14px;
+    letter-spacing:.03em;
+    color:var(--red);
+    margin:0 0 4px;
+  }
+  .reject-alert p{margin:0 0 10px;font-size:12.5px;color:var(--ink);}
+  .mail-field{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;}
+  .mail-field label{font-size:11px;color:var(--muted);font-weight:600;}
+  .mail-field input, .mail-field textarea{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    padding:8px 9px;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    background:#fff;
+    color:var(--ink);
+    width:100%;
+    resize:vertical;
+  }
+  .mail-field textarea{min-height:150px;line-height:1.5;}
+  .mail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+  .btn-red{background:var(--red);color:#fff;}
+  .btn-navy{background:var(--navy);color:#fff;}
+  .btn-red, .btn-navy{font-size:12.5px;padding:8px 12px;flex:1 1 auto;}
+  .row-link-pdf{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--navy);
+    text-decoration:underline;
+    cursor:pointer;
+    background:none;
+    border:none;
+    padding:0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">Recepción de insumos · Control de calidad</p>
+  <h1>Ficha de aceptación</h1>
+  <p>Evalúa materia prima y material de empaque al ingreso. Cada criterio tiene un peso; se requiere 90% o más para aceptar el lote, y el certificado de calidad es obligatorio.</p>
+</header>
+
+<div class="wrap">
+<section>
+
+  <div class="card">
+    <h2 class="section-title">Datos del ingreso</h2>
+    <div class="row">
+      <div class="field" style="flex:1 1 100%;">
+        <label>Tipo de material</label>
+        <select id="tipoMaterial">
+          <option value="">Selecciona el tipo…</option>
+          <option value="quimica">Materia prima química</option>
+          <option value="cajas">Material de empaque · Cajas</option>
+          <option value="envases">Material de empaque · Envases</option>
+          <option value="etiquetas">Material de empaque · Etiquetas</option>
+          <option value="tapas">Material de empaque · Tapas / pistolas</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Producto</label>
+        <input id="fProducto" type="text" placeholder="Ej. Ácido oxálico">
+      </div>
+      <div class="field">
+        <label>Proveedor</label>
+        <input id="fProveedor" type="text" placeholder="Ej. Distrisal">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>N° de lote</label>
+        <input id="fLote" type="text" placeholder="Ej. L-2026-0912">
+      </div>
+      <div class="field">
+        <label>Fecha de recepción</label>
+        <input id="fFecha" type="date">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Recibido por</label>
+        <input id="fResponsable" type="text" placeholder="Nombre">
+      </div>
+    </div>
+  </div>
+
+  <div id="criteriaCard" class="card" style="display:none;">
+    <h2 class="section-title" id="criteriaTitle">Criterios de evaluación</h2>
+    <div id="criteriaContainer"></div>
+  </div>
+
+  <div id="resultPanel" class="result-panel" style="display:none;">
+    <div class="score-block">
+      <div class="score-num" id="scoreNum">0%</div>
+      <div class="score-lbl">Ponderado total</div>
+    </div>
+    <div id="stampEl" class="stamp pending">Sin evaluar</div>
+  </div>
+  <div id="criticalWarning" class="critical-warning" style="display:none;">
+    ⚠ Falta el certificado de calidad — el lote se rechaza automáticamente, sin importar el ponderado.
+  </div>
+
+  <button class="btn-primary" id="btnRegistrar" disabled>Registrar recepción</button>
+
+  <div id="rejectAlert" class="reject-alert" style="display:none;">
+    <h3>⚠ Lote rechazado — novedad generada</h3>
+    <p>Se generó automáticamente el correo para el área de compras y el PDF del registro de rechazo.</p>
+    <div class="mail-field">
+      <label>Para</label>
+      <input id="mailTo" type="text" value="compras@latinproducts.com">
+    </div>
+    <div class="mail-field">
+      <label>Asunto</label>
+      <input id="mailSubject" type="text" readonly>
+    </div>
+    <div class="mail-field">
+      <label>Mensaje</label>
+      <textarea id="mailBody" readonly></textarea>
+    </div>
+    <div class="mail-actions">
+      <button class="btn-red" id="btnOpenMail">Abrir en cliente de correo</button>
+      <button class="btn-navy" id="btnDownloadPdf">Descargar PDF del rechazo</button>
+      <button class="btn-ghost" id="btnCopyMail">Copiar texto</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:22px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <h2 class="section-title" style="border:none;margin:0;padding:0;">Histórico de recepciones</h2>
+      <button class="btn-ghost" id="btnClearHistory">Borrar histórico</button>
+    </div>
+    <div id="historyContainer"><p class="empty-state">Aún no hay recepciones registradas.</p></div>
+  </div>
+
+</section>
+</div>
+
+<script>
+const CRITERIA = {
+  quimica: {
+    label: "Materia prima química",
+    groups: [
+      { key:"documentacion", label:"Documentación", items:[
+        {id:"q_d1", txt:"Certificado de calidad / análisis (COA), lote coincide", w:25, critical:true},
+        {id:"q_d2", txt:"Ficha técnica del producto", w:8},
+        {id:"q_d3", txt:"Hoja de seguridad (MSDS)", w:7},
+        {id:"q_d4", txt:"Remisión/guía con cantidad y lote coinciden", w:5},
+      ]},
+      { key:"tecnico", label:"Técnico", items:[
+        {id:"q_t1", txt:"Aspecto físico conforme (color, olor, sin turbidez)", w:12},
+        {id:"q_t2", txt:"pH dentro del rango especificado", w:8},
+        {id:"q_t3", txt:"Concentración / densidad conforme", w:8},
+        {id:"q_t4", txt:"Sin contaminación ni partículas extrañas", w:7},
+      ]},
+      { key:"presentacion", label:"Presentación", items:[
+        {id:"q_p1", txt:"Envase de transporte íntegro, sin fugas", w:8},
+        {id:"q_p2", txt:"Identificación del proveedor correcta", w:7},
+        {id:"q_p3", txt:"Cantidad / peso coincide con lo facturado", w:5},
+      ]},
+    ]
+  },
+  cajas: {
+    label: "Material de empaque · Cajas",
+    groups: [
+      { key:"documentacion", label:"Documentación", items:[
+        {id:"c_d1", txt:"Certificado de calidad / conformidad", w:20, critical:true},
+        {id:"c_d2", txt:"Ficha técnica (gramaje, medidas)", w:8},
+        {id:"c_d3", txt:"Remisión con cantidad coincide", w:7},
+      ]},
+      { key:"tecnico", label:"Técnico", items:[
+        {id:"c_t1", txt:"Medidas conformes a especificación", w:10},
+        {id:"c_t2", txt:"Resistencia / gramaje del cartón conforme", w:10},
+        {id:"c_t3", txt:"Impresión correcta (colores, texto, código de barras)", w:10},
+        {id:"c_t4", txt:"Sin defectos (golpes, humedad, deformación)", w:5},
+      ]},
+      { key:"presentacion", label:"Presentación", items:[
+        {id:"c_p1", txt:"Armado correcto, troquel sin fallas", w:10},
+        {id:"c_p2", txt:"Acabado superficial sin manchas ni rayones", w:10},
+        {id:"c_p3", txt:"Empaque de transporte adecuado", w:10},
+      ]},
+    ]
+  },
+  envases: {
+    label: "Material de empaque · Envases",
+    groups: [
+      { key:"documentacion", label:"Documentación", items:[
+        {id:"e_d1", txt:"Certificado de calidad / conformidad", w:20, critical:true},
+        {id:"e_d2", txt:"Ficha técnica (material, capacidad, resina)", w:8},
+        {id:"e_d3", txt:"Remisión con cantidad coincide", w:7},
+      ]},
+      { key:"tecnico", label:"Técnico", items:[
+        {id:"e_t1", txt:"Capacidad / volumen conforme", w:10},
+        {id:"e_t2", txt:"Espesor de pared uniforme", w:8},
+        {id:"e_t3", txt:"Compatibilidad de rosca con tapa", w:10},
+        {id:"e_t4", txt:"Sin rebabas, fisuras ni deformaciones", w:7},
+      ]},
+      { key:"presentacion", label:"Presentación", items:[
+        {id:"e_p1", txt:"Transparencia / color conforme", w:10},
+        {id:"e_p2", txt:"Acabado superficial sin rayones ni manchas", w:10},
+        {id:"e_p3", txt:"Empaque de transporte adecuado, sin golpes", w:10},
+      ]},
+    ]
+  },
+  etiquetas: {
+    label: "Material de empaque · Etiquetas",
+    groups: [
+      { key:"documentacion", label:"Documentación", items:[
+        {id:"t_d1", txt:"Certificado de calidad / conformidad", w:20, critical:true},
+        {id:"t_d2", txt:"Ficha técnica (adhesivo, material)", w:8},
+        {id:"t_d3", txt:"Remisión con cantidad coincide", w:7},
+      ]},
+      { key:"tecnico", label:"Técnico", items:[
+        {id:"t_t1", txt:"Medidas conformes a especificación", w:8},
+        {id:"t_t2", txt:"Adhesión correcta, no se despega fácilmente", w:10},
+        {id:"t_t3", txt:"Resistencia a humedad y manipulación", w:7},
+        {id:"t_t4", txt:"Código de barras / información legible y escaneable", w:10},
+      ]},
+      { key:"presentacion", label:"Presentación", items:[
+        {id:"t_p1", txt:"Calidad de impresión (colores, nitidez, sin manchas)", w:15},
+        {id:"t_p2", txt:"Corte y bordes limpios", w:8},
+        {id:"t_p3", txt:"Empaque de transporte adecuado", w:7},
+      ]},
+    ]
+  },
+  tapas: {
+    label: "Material de empaque · Tapas / pistolas",
+    groups: [
+      { key:"documentacion", label:"Documentación", items:[
+        {id:"p_d1", txt:"Certificado de calidad / conformidad", w:20, critical:true},
+        {id:"p_d2", txt:"Ficha técnica (material, rosca)", w:8},
+        {id:"p_d3", txt:"Remisión con cantidad coincide", w:7},
+      ]},
+      { key:"tecnico", label:"Técnico", items:[
+        {id:"p_t1", txt:"Rosca compatible / cierre hermético", w:12},
+        {id:"p_t2", txt:"Funcionamiento correcto del mecanismo (dispara/dosifica bien)", w:10},
+        {id:"p_t3", txt:"Sin fisuras ni rebabas", w:8},
+        {id:"p_t4", txt:"Resistencia del material", w:5},
+      ]},
+      { key:"presentacion", label:"Presentación", items:[
+        {id:"p_p1", txt:"Acabado estético uniforme (color, brillo)", w:12},
+        {id:"p_p2", txt:"Sin rayones ni deformaciones", w:10},
+        {id:"p_p3", txt:"Empaque de transporte adecuado", w:8},
+      ]},
+    ]
+  },
+};
+
+const THRESHOLD = 90;
+let currentType = null;
+let checkedState = {};
+
+const criteriaCard = document.getElementById('criteriaCard');
+const criteriaTitle = document.getElementById('criteriaTitle');
+const criteriaContainer = document.getElementById('criteriaContainer');
+const resultPanel = document.getElementById('resultPanel');
+const scoreNum = document.getElementById('scoreNum');
+const stampEl = document.getElementById('stampEl');
+const criticalWarning = document.getElementById('criticalWarning');
+const btnRegistrar = document.getElementById('btnRegistrar');
+
+document.getElementById('fFecha').valueAsDate = new Date();
+
+document.getElementById('tipoMaterial').addEventListener('change', (e)=>{
+  currentType = e.target.value;
+  if(!currentType){ criteriaCard.style.display='none'; resultPanel.style.display='none'; criticalWarning.style.display='none'; btnRegistrar.disabled=true; return; }
+  renderCriteria(currentType);
+});
+
+function renderCriteria(typeKey){
+  const def = CRITERIA[typeKey];
+  checkedState = {};
+  criteriaTitle.textContent = "Criterios · " + def.label;
+  criteriaContainer.innerHTML = '';
+  def.groups.forEach(g=>{
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'crit-group';
+    const totalW = g.items.reduce((s,i)=>s+i.w,0);
+    groupDiv.innerHTML = `
+      <div class="crit-group-head">
+        <span class="name">${g.label}</span>
+        <span class="pct" data-pct="${g.key}">0 / ${totalW} pts</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" data-bar="${g.key}" style="width:0%"></div></div>
+    `;
+    const itemsWrap = document.createElement('div');
+    g.items.forEach(item=>{
+      checkedState[item.id] = false;
+      const row = document.createElement('label');
+      row.className = 'crit-item' + (item.critical ? ' critical' : '');
+      row.innerHTML = `
+        <input type="checkbox" data-id="${item.id}" data-w="${item.w}" data-group="${g.key}">
+        <span class="txt">${item.txt}${item.critical ? '<span class="tag">Obligatorio</span>' : ''}</span>
+        <span class="w">${item.w} pts</span>
+      `;
+      itemsWrap.appendChild(row);
+    });
+    groupDiv.appendChild(itemsWrap);
+    criteriaContainer.appendChild(groupDiv);
+  });
+
+  criteriaContainer.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', onCheckChange);
+  });
+
+  criteriaCard.style.display = 'block';
+  resultPanel.style.display = 'flex';
+  computeScore();
+}
+
+function onCheckChange(e){
+  checkedState[e.target.dataset.id] = e.target.checked;
+  computeScore();
+}
+
+function computeScore(){
+  const def = CRITERIA[currentType];
+  let total = 0;
+  let hasCriticalMissing = false;
+
+  def.groups.forEach(g=>{
+    const totalW = g.items.reduce((s,i)=>s+i.w,0);
+    let earned = 0;
+    g.items.forEach(item=>{
+      if(checkedState[item.id]) earned += item.w;
+      else if(item.critical) hasCriticalMissing = true;
+    });
+    total += earned;
+    const pctEl = document.querySelector(`[data-pct="${g.key}"]`);
+    const barEl = document.querySelector(`[data-bar="${g.key}"]`);
+    if(pctEl) pctEl.textContent = `${earned} / ${totalW} pts`;
+    if(barEl) barEl.style.width = `${totalW ? (earned/totalW*100) : 0}%`;
+  });
+
+  scoreNum.textContent = total + '%';
+  criticalWarning.style.display = hasCriticalMissing ? 'block' : 'none';
+
+  const passed = total >= THRESHOLD && !hasCriticalMissing;
+  const anyChecked = Object.values(checkedState).some(v=>v);
+
+  if(!anyChecked){
+    stampEl.className = 'stamp pending';
+    stampEl.textContent = 'Sin evaluar';
+    btnRegistrar.disabled = true;
+  } else if(passed){
+    stampEl.className = 'stamp accept';
+    stampEl.textContent = 'Aceptado';
+    btnRegistrar.disabled = false;
+  } else {
+    stampEl.className = 'stamp reject';
+    stampEl.textContent = 'Rechazado';
+    btnRegistrar.disabled = false;
+  }
+
+  return { total, passed, hasCriticalMissing };
+}
+
+function buildDetalle(typeKey){
+  const def = CRITERIA[typeKey];
+  return def.groups.map(g=>({
+    label: g.label,
+    items: g.items.map(it=>({
+      txt: it.txt,
+      w: it.w,
+      checked: !!checkedState[it.id],
+      critical: !!it.critical,
+    }))
+  }));
+}
+
+btnRegistrar.addEventListener('click', async ()=>{
+  const { total, passed, hasCriticalMissing } = computeScore();
+  const typeKeySnapshot = currentType;
+  const detalle = buildDetalle(typeKeySnapshot);
+
+  const record = {
+    id: 'r_' + Date.now(),
+    tipo: CRITERIA[typeKeySnapshot].label,
+    producto: document.getElementById('fProducto').value || '—',
+    proveedor: document.getElementById('fProveedor').value || '—',
+    lote: document.getElementById('fLote').value || '—',
+    fecha: document.getElementById('fFecha').value || '—',
+    responsable: document.getElementById('fResponsable').value || '—',
+    score: total,
+    resultado: passed ? 'Aceptado' : 'Rechazado',
+    criticoFaltante: hasCriticalMissing,
+    detalle: detalle,
+  };
+  await saveRecord(record);
+  await renderHistory();
+
+  if(!passed){
+    handleRejection(record);
+  } else {
+    document.getElementById('rejectAlert').style.display = 'none';
+  }
+
+  // reset form
+  document.getElementById('tipoMaterial').value = '';
+  document.getElementById('fProducto').value = '';
+  document.getElementById('fProveedor').value = '';
+  document.getElementById('fLote').value = '';
+  document.getElementById('fResponsable').value = '';
+  document.getElementById('fFecha').valueAsDate = new Date();
+  currentType = null;
+  criteriaCard.style.display = 'none';
+  resultPanel.style.display = 'none';
+  criticalWarning.style.display = 'none';
+  btnRegistrar.disabled = true;
+});
+
+function failedItems(detalle){
+  const out = [];
+  detalle.forEach(g=>{
+    g.items.forEach(it=>{
+      if(!it.checked) out.push(`- [${g.label}] ${it.txt}${it.critical ? ' (criterio obligatorio)' : ''}`);
+    });
+  });
+  return out;
+}
+
+function buildMailContent(record){
+  const subject = `Rechazo de insumo — ${record.producto} — Lote ${record.lote}`;
+  const motivos = failedItems(record.detalle);
+  const motivoTxt = record.criticoFaltante
+    ? 'Motivo principal: no llegó el certificado de calidad del producto, criterio obligatorio para la aceptación.'
+    : 'El insumo no alcanzó el 90% mínimo de cumplimiento requerido.';
+  const body =
+`Área de Compras,
+
+Se informa el rechazo del siguiente insumo en la recepción de materiales:
+
+Producto: ${record.producto}
+Tipo: ${record.tipo}
+Proveedor: ${record.proveedor}
+Lote: ${record.lote}
+Fecha de recepción: ${record.fecha}
+Recibido por: ${record.responsable}
+Ponderado obtenido: ${record.score}% (mínimo requerido: 90%)
+Resultado: RECHAZADO
+
+${motivoTxt}
+
+Criterios que no se cumplieron:
+${motivos.join('\n')}
+
+Se solicita gestionar la novedad con el proveedor (reposición, nota crédito o certificado faltante, según aplique) y confirmar la acción a tomar con este lote.
+
+Control de Calidad`;
+  return { subject, body };
+}
+
+function handleRejection(record){
+  const { subject, body } = buildMailContent(record);
+  const alertBox = document.getElementById('rejectAlert');
+  document.getElementById('mailSubject').value = subject;
+  document.getElementById('mailBody').value = body;
+  alertBox.style.display = 'block';
+  alertBox.scrollIntoView({ behavior:'smooth', block:'nearest' });
+
+  document.getElementById('btnOpenMail').onclick = ()=>{
+    const to = document.getElementById('mailTo').value.trim();
+    const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailto;
+  };
+  document.getElementById('btnCopyMail').onclick = async ()=>{
+    try{
+      await navigator.clipboard.writeText(`Para: ${document.getElementById('mailTo').value}\nAsunto: ${subject}\n\n${body}`);
+      const btn = document.getElementById('btnCopyMail');
+      const old = btn.textContent;
+      btn.textContent = 'Copiado ✓';
+      setTimeout(()=>btn.textContent = old, 1500);
+    }catch(e){}
+  };
+  document.getElementById('btnDownloadPdf').onclick = ()=> generateRejectionPDF(record);
+
+  // genera el PDF automáticamente al momento del rechazo
+  generateRejectionPDF(record);
+}
+
+function generateRejectionPDF(record){
+  try{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'a4' });
+    const marginX = 48;
+    let y = 56;
+
+    doc.setFillColor(27,42,65);
+    doc.rect(0,0,595,64,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(16);
+    doc.text('FICHA DE RECEPCIÓN — RECHAZO', marginX, 40);
+
+    y = 92;
+    doc.setTextColor(20,20,20);
+    doc.setFontSize(11);
+    doc.setFont('helvetica','bold');
+    doc.text('Resultado:', marginX, y);
+    doc.setTextColor(178,58,52);
+    doc.text('RECHAZADO', marginX + 70, y);
+    doc.setTextColor(20,20,20);
+    doc.text(`Ponderado: ${record.score}% (mínimo requerido: 90%)`, marginX + 200, y);
+
+    y += 24;
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(10);
+    const fields = [
+      ['Tipo de material', record.tipo],
+      ['Producto', record.producto],
+      ['Proveedor', record.proveedor],
+      ['Lote', record.lote],
+      ['Fecha de recepción', record.fecha],
+      ['Recibido por', record.responsable],
+    ];
+    fields.forEach(([k,v])=>{
+      doc.setFont('helvetica','bold');
+      doc.text(`${k}:`, marginX, y);
+      doc.setFont('helvetica','normal');
+      doc.text(String(v), marginX + 140, y);
+      y += 16;
+    });
+
+    if(record.criticoFaltante){
+      y += 6;
+      doc.setTextColor(178,58,52);
+      doc.setFont('helvetica','bold');
+      doc.text('Falta el certificado de calidad — rechazo automático.', marginX, y);
+      doc.setTextColor(20,20,20);
+      y += 20;
+    }
+
+    y += 10;
+    doc.setDrawColor(200,200,200);
+    doc.line(marginX, y, 547, y);
+    y += 22;
+
+    record.detalle.forEach(group=>{
+      if(y > 760){ doc.addPage(); y = 56; }
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(11);
+      doc.text(group.label.toUpperCase(), marginX, y);
+      y += 16;
+      doc.setFontSize(9.5);
+      group.items.forEach(item=>{
+        if(y > 780){ doc.addPage(); y = 56; }
+        const mark = item.checked ? 'OK' : 'X';
+        doc.setFont('helvetica','bold');
+        doc.setTextColor(item.checked ? 47 : 178, item.checked ? 107 : 58, item.checked ? 79 : 52);
+        doc.text(mark, marginX, y);
+        doc.setTextColor(20,20,20);
+        doc.setFont('helvetica','normal');
+        const label = item.critical ? `${item.txt} (obligatorio)` : item.txt;
+        const lines = doc.splitTextToSize(`${label} — ${item.w} pts`, 430);
+        doc.text(lines, marginX + 22, y);
+        y += 14 * lines.length;
+      });
+      y += 8;
+    });
+
+    const fname = `rechazo_${record.lote}_${record.fecha}`.replace(/[^a-z0-9_\-]/gi,'_') + '.pdf';
+    doc.save(fname);
+  }catch(e){
+    console.error('No se pudo generar el PDF', e);
+  }
+}
+
+async function getHistory(){
+  try{
+    const res = await window.storage.get('recepciones', false);
+    return res ? JSON.parse(res.value) : [];
+  }catch(e){
+    return [];
+  }
+}
+
+async function saveRecord(record){
+  const list = await getHistory();
+  list.unshift(record);
+  try{
+    await window.storage.set('recepciones', JSON.stringify(list), false);
+  }catch(e){
+    console.error('No se pudo guardar el registro', e);
+  }
+}
+
+async function renderHistory(){
+  const container = document.getElementById('historyContainer');
+  const list = await getHistory();
+  if(!list.length){
+    container.innerHTML = '<p class="empty-state">Aún no hay recepciones registradas.</p>';
+    return;
+  }
+  let rows = list.map((r,i)=>`
+    <tr>
+      <td>${r.fecha}<br><span style="color:var(--muted)">${r.tipo}</span></td>
+      <td>${r.producto}<br><span style="color:var(--muted)">${r.proveedor} · Lote ${r.lote}</span></td>
+      <td><span class="pill ${r.resultado==='Aceptado'?'accept':'reject'}">${r.resultado}</span><br><span style="color:var(--muted)">${r.score}%</span>
+        ${r.resultado==='Rechazado' ? `<br><button class="row-link-pdf" data-idx="${i}">Descargar PDF</button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+  container.innerHTML = `
+    <table>
+      <thead><tr><th>Fecha / tipo</th><th>Producto</th><th>Resultado</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+  container.querySelectorAll('.row-link-pdf').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const rec = list[parseInt(btn.dataset.idx,10)];
+      if(rec) generateRejectionPDF(rec);
+    });
+  });
+}
+
+document.getElementById('btnClearHistory').addEventListener('click', async ()=>{
+  if(!confirm('¿Borrar todo el histórico de recepciones?')) return;
+  try{
+    await window.storage.set('recepciones', JSON.stringify([]), false);
+  }catch(e){}
+  renderHistory();
+});
+
+renderHistory();
+</script>
+
+</body>
+</html>
